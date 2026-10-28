@@ -1040,6 +1040,12 @@ namespace esphome
             sendCarServerVehicleActionMessage (BLE_CarServer_VehicleAction::GET_CLOSURES_STATE, 0);
           if ((number_updates_since_connection_ % get_action_detail(BLE_CarServer_VehicleAction::GET_TYRES_STATE).numberUpdatesBetweenGets) == 0)
             sendCarServerVehicleActionMessage (BLE_CarServer_VehicleAction::GET_TYRES_STATE, 0);
+          if (wants_location_state () and
+              ((number_updates_since_connection_ % get_action_detail(BLE_CarServer_VehicleAction::GET_LOCATION_STATE).numberUpdatesBetweenGets) == 0))
+            sendCarServerVehicleActionMessage (BLE_CarServer_VehicleAction::GET_LOCATION_STATE, 0);
+          if (wants_software_update_state () and
+              ((number_updates_since_connection_ % get_action_detail(BLE_CarServer_VehicleAction::GET_SOFTWARE_UPDATE_STATE).numberUpdatesBetweenGets) == 0))
+            sendCarServerVehicleActionMessage (BLE_CarServer_VehicleAction::GET_SOFTWARE_UPDATE_STATE, 0);
           if ((car_just_woken_ != 0) and ((millis() - car_wake_time_) > post_wake_poll_time_))
           {
             car_just_woken_ = 0;
@@ -1861,6 +1867,23 @@ namespace esphome
             {
               ESP_LOGI (TAG, "No data to set charge port latch");
             }
+            // Extended charge data (only published if the sensors are configured)
+            auto& charge_state_ = carserver_response.response_msg.vehicleData.charge_state;
+            if (charge_state_.has_conn_charge_cable)
+              publishSensor (TextSensorId::ChargeCableType, lookup (CHARGE_CABLE_TYPE_MAP, charge_state_.conn_charge_cable.which_type));
+            if (charge_state_.which_optional_charger_pilot_current)
+              publishSensor (NumericSensorId::ChargerPilotCurrent, charge_state_.optional_charger_pilot_current.charger_pilot_current);
+            if (charge_state_.which_optional_fast_charger_present)
+              publishSensor (BinarySensorId::IsFastChargerPresent, charge_state_.optional_fast_charger_present.fast_charger_present);
+            if (charge_state_.which_optional_scheduled_charging_mode)
+              publishSensor (TextSensorId::ScheduledChargingMode, lookup (SCHEDULED_CHARGING_MODE_MAP, charge_state_.optional_scheduled_charging_mode.scheduled_charging_mode));
+            if (charge_state_.which_optional_scheduled_charging_start_time_minutes)
+            {
+              char hhmm_[16]; //16 is too large but it avoids compiler warnings!
+              uint32_t start_ = charge_state_.optional_scheduled_charging_start_time_minutes.scheduled_charging_start_time_minutes;
+              snprintf (hhmm_, sizeof (hhmm_), "%02d:%02d", static_cast<int>(start_ / 60), static_cast<int>(start_ % 60));
+              publishSensor (TextSensorId::ScheduledChargingStart, hhmm_);
+            }
             publishSensor (TextSensorId::LastUpdate, ctime(&timestamp));
           }
           else if (carserver_response.response_msg.vehicleData.has_drive_state)
@@ -1931,6 +1954,32 @@ namespace esphome
             {
               ESP_LOGI (TAG, "No data to set defrost mode");
             }
+            // Extended climate data (only published if the sensors are configured)
+            auto& climate_state_ = carserver_response.response_msg.vehicleData.climate_state;
+            if (climate_state_.which_optional_passenger_temp_setting)
+              publishSensor (NumericSensorId::PassengerTemp, climate_state_.optional_passenger_temp_setting.passenger_temp_setting);
+            if (climate_state_.which_optional_seat_heater_left)
+              publishSensor (NumericSensorId::SeatHeaterFrontLeft, climate_state_.optional_seat_heater_left.seat_heater_left);
+            if (climate_state_.which_optional_seat_heater_right)
+              publishSensor (NumericSensorId::SeatHeaterFrontRight, climate_state_.optional_seat_heater_right.seat_heater_right);
+            if (climate_state_.which_optional_seat_heater_rear_left)
+              publishSensor (NumericSensorId::SeatHeaterRearLeft, climate_state_.optional_seat_heater_rear_left.seat_heater_rear_left);
+            if (climate_state_.which_optional_seat_heater_rear_center)
+              publishSensor (NumericSensorId::SeatHeaterRearCenter, climate_state_.optional_seat_heater_rear_center.seat_heater_rear_center);
+            if (climate_state_.which_optional_seat_heater_rear_right)
+              publishSensor (NumericSensorId::SeatHeaterRearRight, climate_state_.optional_seat_heater_rear_right.seat_heater_rear_right);
+            if (climate_state_.which_optional_fan_status)
+              publishSensor (NumericSensorId::FanStatus, climate_state_.optional_fan_status.fan_status);
+            if (climate_state_.which_optional_is_front_defroster_on)
+              publishSensor (BinarySensorId::IsFrontDefrosterOn, climate_state_.optional_is_front_defroster_on.is_front_defroster_on);
+            if (climate_state_.which_optional_is_rear_defroster_on)
+              publishSensor (BinarySensorId::IsRearDefrosterOn, climate_state_.optional_is_rear_defroster_on.is_rear_defroster_on);
+            if (climate_state_.which_optional_is_preconditioning)
+              publishSensor (BinarySensorId::IsPreconditioning, climate_state_.optional_is_preconditioning.is_preconditioning);
+            if (climate_state_.which_optional_battery_heater)
+              publishSensor (BinarySensorId::IsBatteryHeaterOn, climate_state_.optional_battery_heater.battery_heater);
+            if (climate_state_.has_climate_keeper_mode)
+              publishSensor (TextSensorId::ClimateKeeperMode, lookup (CLIMATE_KEEPER_MODE_MAP, climate_state_.climate_keeper_mode.which_type));
             if (carserver_response.response_msg.vehicleData.climate_state.which_optional_cabin_overheat_protection)
             {
               CarServer_ClimateState_CabinOverheatProtection_E cabin_overheat_protection_ = carserver_response.response_msg.vehicleData.climate_state.optional_cabin_overheat_protection.cabin_overheat_protection;
@@ -2011,6 +2060,22 @@ namespace esphome
             {
               ESP_LOGI (TAG, "No data to set windows state");
             }
+            // Extended closures data (only published if the sensors are configured)
+            auto& closures_state_ = carserver_response.response_msg.vehicleData.closures_state;
+            if (closures_state_.which_optional_door_open_driver_front)
+              publishSensor (BinarySensorId::IsDoorDriverFrontOpen, closures_state_.optional_door_open_driver_front.door_open_driver_front);
+            if (closures_state_.which_optional_door_open_driver_rear)
+              publishSensor (BinarySensorId::IsDoorDriverRearOpen, closures_state_.optional_door_open_driver_rear.door_open_driver_rear);
+            if (closures_state_.which_optional_door_open_passenger_front)
+              publishSensor (BinarySensorId::IsDoorPassengerFrontOpen, closures_state_.optional_door_open_passenger_front.door_open_passenger_front);
+            if (closures_state_.which_optional_door_open_passenger_rear)
+              publishSensor (BinarySensorId::IsDoorPassengerRearOpen, closures_state_.optional_door_open_passenger_rear.door_open_passenger_rear);
+            if (closures_state_.which_optional_valet_mode)
+              publishSensor (BinarySensorId::IsValetMode, closures_state_.optional_valet_mode.valet_mode);
+            if (closures_state_.has_sentry_mode_state)
+              publishSensor (TextSensorId::SentryModeState, lookup (SENTRY_MODE_STATE_MAP, closures_state_.sentry_mode_state.which_type));
+            if (closures_state_.has_center_display_state)
+              publishSensor (TextSensorId::DisplayState, lookup (DISPLAY_STATE_MAP, closures_state_.center_display_state.which_type));
             publishSensor (TextSensorId::LastUpdate, ctime(&timestamp));
           }
           else if (carserver_response.response_msg.vehicleData.has_tire_pressure_state)
@@ -2029,6 +2094,43 @@ namespace esphome
             {
               ESP_LOGI (TAG, "No data to set tyre pressures");
             }
+            publishSensor (TextSensorId::LastUpdate, ctime(&timestamp));
+          }
+          else if (carserver_response.response_msg.vehicleData.has_location_state)
+          {
+            auto& location_state_ = carserver_response.response_msg.vehicleData.location_state;
+            if (location_state_.which_optional_latitude and location_state_.which_optional_longitude)
+            {
+              publishSensor (NumericSensorId::Latitude, location_state_.optional_latitude.latitude);
+              publishSensor (NumericSensorId::Longitude, location_state_.optional_longitude.longitude);
+            }
+            else
+            {
+              ESP_LOGI (TAG, "No data to set location");
+            }
+            if (location_state_.which_optional_heading)
+              publishSensor (NumericSensorId::Heading, location_state_.optional_heading.heading);
+            if (location_state_.which_optional_homelink_nearby)
+              publishSensor (BinarySensorId::IsHomelinkNearby, location_state_.optional_homelink_nearby.homelink_nearby);
+            publishSensor (TextSensorId::LastUpdate, ctime(&timestamp));
+          }
+          else if (carserver_response.response_msg.vehicleData.has_software_update_state)
+          {
+            auto& software_update_state_ = carserver_response.response_msg.vehicleData.software_update_state;
+            if (software_update_state_.has_status)
+            {
+              publishSensor (TextSensorId::SoftwareUpdateStatus, lookup (SOFTWARE_UPDATE_STATUS_MAP, software_update_state_.status.which_type));
+            }
+            else
+            {
+              ESP_LOGI (TAG, "No data to set software update status");
+            }
+            if (software_update_state_.which_optional_download_perc)
+              publishSensor (NumericSensorId::SoftwareDownloadPerc, software_update_state_.optional_download_perc.download_perc);
+            if (software_update_state_.which_optional_install_perc)
+              publishSensor (NumericSensorId::SoftwareInstallPerc, software_update_state_.optional_install_perc.install_perc);
+            if (software_update_state_.which_optional_expected_duration_sec)
+              publishSensor (NumericSensorId::SoftwareExpectedDuration, software_update_state_.optional_expected_duration_sec.expected_duration_sec / 60.0f);
             publishSensor (TextSensorId::LastUpdate, ctime(&timestamp));
           }
           else if (carserver_response.response_msg.vehicleData.has_charge_schedule_state)

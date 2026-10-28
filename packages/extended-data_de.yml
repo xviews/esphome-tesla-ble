@@ -1,0 +1,116 @@
+# Deutsche Namen und Werte fuer packages/extended-data.yml
+# Nur zusammen mit extended-data.yml einbinden (danach), sonst werden die Sensoren
+# trotzdem angelegt. Die Rohwerte bleiben englisch (get_raw_state() in Lambdas).
+
+tesla_ble_vehicle:
+  passenger_temp:
+    name: "Klimatemperatur Beifahrer"
+  seat_heater_front_left:
+    name: "Sitzheizung vorne links"
+  seat_heater_front_right:
+    name: "Sitzheizung vorne rechts"
+  seat_heater_rear_left:
+    name: "Sitzheizung hinten links"
+  seat_heater_rear_center:
+    name: "Sitzheizung hinten Mitte"
+  seat_heater_rear_right:
+    name: "Sitzheizung hinten rechts"
+  fan_status:
+    name: "Gebläsestufe"
+  is_front_defroster_on:
+    name: "Frontscheibenheizung"
+  is_rear_defroster_on:
+    name: "Heckscheibenheizung"
+  is_preconditioning:
+    name: "Vorklimatisierung"
+  is_battery_heater_on:
+    name: "Batterieheizung"
+  climate_keeper_mode:
+    name: "Klima-Modus"
+    filters:
+      - substitute:
+          - "Off -> Aus"
+          - "Keep -> Klima an lassen"
+          - "Dog -> Hundemodus"
+          - "Camp -> Campingmodus"
+          - "Unknown -> Unbekannt"
+
+  is_door_driver_front_open:
+    name: "Tür Fahrer vorne"
+  is_door_driver_rear_open:
+    name: "Tür Fahrer hinten"
+  is_door_passenger_front_open:
+    name: "Tür Beifahrer vorne"
+  is_door_passenger_rear_open:
+    name: "Tür Beifahrer hinten"
+  sentry_mode_state:
+    name: "Wächtermodus Status"
+    filters:
+      - substitute:
+          - "Off -> Aus"
+          - "Idle -> Bereit"
+          - "Armed -> Scharf"
+          - "Aware -> Aufmerksam"
+          - "Panic -> Alarm"
+          - "Quiet -> Leise"
+  display_state:
+    name: "Bildschirm"
+    filters:
+      - substitute:
+          - "Off -> Aus"
+          - "Dim -> Gedimmt"
+          - "Accessory -> Zubehör"
+          - "On -> An"
+          - "Driving -> Fahrt"
+          - "Charging -> Laden"
+          - "Lock -> Gesperrt"
+          - "Sentry -> Wächter"
+          - "Dog -> Hundemodus"
+          - "Entertainment -> Unterhaltung"
+  is_valet_mode:
+    name: "Valet-Modus"
+
+  charge_cable_type:
+    name: "Ladekabel"
+    filters:
+      - substitute:
+          - "None -> Keins"
+  charger_pilot_current:
+    name: "Wallbox-Freigabestrom"
+  is_fast_charger_present:
+    name: "Schnelllader"
+  scheduled_charging_mode:
+    name: "Geplantes Laden"
+    filters:
+      - substitute:
+          - "Off -> Aus"
+          - "Start at -> Startzeit"
+          - "Depart by -> Abfahrtszeit"
+  scheduled_charging_start:
+    name: "Geplanter Ladestart"
+
+  latitude:
+    name: "Breitengrad"
+  longitude:
+    name: "Längengrad"
+  heading:
+    name: "Fahrtrichtung"
+  is_homelink_nearby:
+    name: "HomeLink in der Nähe"
+
+  software_update_status:
+    name: "Software-Update"
+    filters:
+      - substitute:
+          - "None -> Keins"
+          - "Installing -> Wird installiert"
+          - "Scheduled -> Geplant"
+          - "Available -> Verfügbar"
+          - "Waiting for WiFi -> Wartet auf WLAN"
+          - "Downloading -> Wird geladen"
+  software_download_perc:
+    name: "Software-Download"
+  software_install_perc:
+    name: "Software-Installation"
+  software_expected_duration:
+    name: "Software-Installationsdauer"

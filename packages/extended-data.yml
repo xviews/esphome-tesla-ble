@@ -1,0 +1,124 @@
+# Optional package: additional vehicle data
+#
+# Adds seat heaters, defrosters, climate keeper, individual doors, sentry state,
+# display state, charge cable, scheduled charging, location and software update.
+#
+# Location and software update data are only requested from the car when at least
+# one of their sensors is configured, so you can remove those blocks below if you
+# don't want the extra BLE traffic (or don't want the car's position in Home Assistant).
+#
+# Usage (after packages/client.yml):
+#   - packages/extended-data.yml
+# For German names additionally (after this file):
+#   - packages/extended-data_de.yml
+
+tesla_ble_vehicle:
+  # Climate
+  passenger_temp:
+    id: "passenger_temp"
+    name: "Passenger temperature"
+  seat_heater_front_left:
+    id: "seat_heater_front_left"
+    name: "Seat heater front left"
+  seat_heater_front_right:
+    id: "seat_heater_front_right"
+    name: "Seat heater front right"
+  seat_heater_rear_left:
+    id: "seat_heater_rear_left"
+    name: "Seat heater rear left"
+  seat_heater_rear_center:
+    id: "seat_heater_rear_center"
+    name: "Seat heater rear center"
+  seat_heater_rear_right:
+    id: "seat_heater_rear_right"
+    name: "Seat heater rear right"
+  fan_status:
+    id: "fan_status"
+    name: "Fan speed"
+  is_front_defroster_on:
+    id: "is_front_defroster_on"
+    name: "Front defroster"
+  is_rear_defroster_on:
+    id: "is_rear_defroster_on"
+    name: "Rear defroster"
+  is_preconditioning:
+    id: "is_preconditioning"
+    name: "Preconditioning"
+  is_battery_heater_on:
+    id: "is_battery_heater_on"
+    name: "Battery heater"
+  climate_keeper_mode:
+    id: "climate_keeper_mode"
+    name: "Climate keeper mode"
+
+  # Doors and security
+  is_door_driver_front_open:
+    id: "is_door_driver_front_open"
+    name: "Door driver front"
+  is_door_driver_rear_open:
+    id: "is_door_driver_rear_open"
+    name: "Door driver rear"
+  is_door_passenger_front_open:
+    id: "is_door_passenger_front_open"
+    name: "Door passenger front"
+  is_door_passenger_rear_open:
+    id: "is_door_passenger_rear_open"
+    name: "Door passenger rear"
+  sentry_mode_state:
+    id: "sentry_mode_state"
+    name: "Sentry mode state"
+  display_state:
+    id: "display_state"
+    name: "Display state"
+    disabled_by_default: true
+  is_valet_mode:
+    id: "is_valet_mode"
+    name: "Valet mode"
+    disabled_by_default: true
+
+  # Charging
+  charge_cable_type:
+    id: "charge_cable_type"
+    name: "Charge cable"
+  charger_pilot_current:
+    id: "charger_pilot_current"
+    name: "Charger pilot current"
+  is_fast_charger_present:
+    id: "is_fast_charger_present"
+    name: "Fast charger"
+  scheduled_charging_mode:
+    id: "scheduled_charging_mode"
+    name: "Scheduled charging mode"
+  scheduled_charging_start:
+    id: "scheduled_charging_start"
+    name: "Scheduled charging start"
+
+  # Location (remove this block to stop location requests)
+  latitude:
+    id: "latitude"
+    name: "Latitude"
+  longitude:
+    id: "longitude"
+    name: "Longitude"
+  heading:
+    id: "heading"
+    name: "Heading"
+    disabled_by_default: true
+  is_homelink_nearby:
+    id: "is_homelink_nearby"
+    name: "HomeLink nearby"
+
+  # Software update (remove this block to stop software update requests)
+  software_update_status:
+    id: "software_update_status"
+    name: "Software update"
+  software_download_perc:
+    id: "software_download_perc"
+    name: "Software download"
+  software_install_perc:
+    id: "software_install_perc"
+    name: "Software install"
+  software_expected_duration:
+    id: "software_expected_duration"
+    name: "Software install duration"
+    disabled_by_default: true

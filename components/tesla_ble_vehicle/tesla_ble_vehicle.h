@@ -68,6 +68,7 @@ namespace esphome
             DEL_CHARGING_SCHEDULE,
             SET_CABIN_OVERHEAT_PROTECTION,
             SET_CABIN_OVERHEAT_LIMIT,
+            GET_SOFTWARE_UPDATE_STATE,
             _COUNT  // sentinel value to get count of entries
         };
         enum class AllowedMsg // The type of messages to send
@@ -106,7 +107,7 @@ namespace esphome
             GetOnSet getOnSet;
             int numberUpdatesBetweenGets; // Only used for GetVehicleDataMessage
         };
-        static constexpr std::array<ActionMessageDetail, 29> ACTION_SPECIFICS // Don't forget to increase the size when adding a row
+        static constexpr std::array<ActionMessageDetail, 30> ACTION_SPECIFICS // Don't forget to increase the size when adding a row
         {{
             {BLE_CarServer_VehicleAction::DO_NOTHING,                       "",                          AllowedMsg::Empty,                 0,                                                              GetOnSet::Invalid,                0},
             {BLE_CarServer_VehicleAction::GET_CHARGE_STATE,                 "getChargeState",            AllowedMsg::GetVehicleDataMessage, CarServer_GetVehicleData_getChargeState_tag,                    GetOnSet::Invalid,                1},
@@ -137,6 +138,7 @@ namespace esphome
             {BLE_CarServer_VehicleAction::DEL_CHARGING_SCHEDULE,            "delChargingSchedule",       AllowedMsg::VehicleActionMessage,  CarServer_VehicleAction_removeChargeScheduleAction_tag,         GetOnSet::GetChargeScheduleState, 0},
             {BLE_CarServer_VehicleAction::SET_CABIN_OVERHEAT_PROTECTION,    "setCabinOverheatProtection",AllowedMsg::VehicleActionMessage,  CarServer_VehicleAction_setCabinOverheatProtectionAction_tag,   GetOnSet::GetClimateState,        0},
             {BLE_CarServer_VehicleAction::SET_CABIN_OVERHEAT_LIMIT,         "setCabinOverheatLimit",     AllowedMsg::VehicleActionMessage,  CarServer_VehicleAction_setCopTempAction_tag,                   GetOnSet::GetClimateState,        0},
+            {BLE_CarServer_VehicleAction::GET_SOFTWARE_UPDATE_STATE,        "getSoftwareUpdateState",    AllowedMsg::GetVehicleDataMessage, CarServer_GetVehicleData_getSoftwareUpdateState_tag,            GetOnSet::Invalid,               30},
         }};
         static_assert(ACTION_SPECIFICS.size() == static_cast<std::size_t>(BLE_CarServer_VehicleAction::_COUNT), "ACTION_SPECIFICS out of sync with enum");
         static const char *const TAG = "tesla_ble_vehicle";
@@ -237,6 +239,17 @@ namespace esphome
             IsFrunkOpen,
             IsClimateOn,
             WindowsState,
+            IsFrontDefrosterOn,
+            IsRearDefrosterOn,
+            IsPreconditioning,
+            IsBatteryHeaterOn,
+            IsDoorDriverFrontOpen,
+            IsDoorDriverRearOpen,
+            IsDoorPassengerFrontOpen,
+            IsDoorPassengerRearOpen,
+            IsValetMode,
+            IsFastChargerPresent,
+            IsHomelinkNearby,
             Count
         };
         enum class TextSensorId : uint8_t {
@@ -245,6 +258,13 @@ namespace esphome
             ChargingState,
             ChargePortLatchState,
             LastUpdate,
+            ClimateKeeperMode,
+            SentryModeState,
+            DisplayState,
+            ChargeCableType,
+            ScheduledChargingMode,
+            ScheduledChargingStart,
+            SoftwareUpdateStatus,
             Count
         };
         enum class NumericSensorId : uint8_t {
@@ -269,6 +289,20 @@ namespace esphome
             ChargerPhases,
             ChargeRate,
             DriverTemp,
+            PassengerTemp,
+            SeatHeaterFrontLeft,
+            SeatHeaterFrontRight,
+            SeatHeaterRearLeft,
+            SeatHeaterRearCenter,
+            SeatHeaterRearRight,
+            FanStatus,
+            ChargerPilotCurrent,
+            Latitude,
+            Longitude,
+            Heading,
+            SoftwareDownloadPerc,
+            SoftwareInstallPerc,
+            SoftwareExpectedDuration,
             Count
         };
 
@@ -387,6 +421,20 @@ namespace esphome
             inline const ActionMessageDetail& get_action_detail (BLE_CarServer_VehicleAction action)
             { // Get the entry in the ACTION_SPECIFICS table corresponding to the action (we can't be sure of the order)
                 return ACTION_SPECIFICS[static_cast<size_t>(action)];
+            }
+            // Optional data (location, software update) is only requested from the car if one of its sensors is configured
+            inline bool has_sensor (BinarySensorId id) const { return binary_sensors_[static_cast<size_t>(id)] != nullptr; }
+            inline bool has_sensor (TextSensorId id) const { return text_sensors_[static_cast<size_t>(id)] != nullptr; }
+            inline bool has_sensor (NumericSensorId id) const { return numeric_sensors_[static_cast<size_t>(id)] != nullptr; }
+            inline bool wants_location_state () const
+            {
+                return has_sensor (NumericSensorId::Latitude) or has_sensor (NumericSensorId::Longitude) or
+                       has_sensor (NumericSensorId::Heading) or has_sensor (BinarySensorId::IsHomelinkNearby);
+            }
+            inline bool wants_software_update_state () const
+            {
+                return has_sensor (TextSensorId::SoftwareUpdateStatus) or has_sensor (NumericSensorId::SoftwareDownloadPerc) or
+                       has_sensor (NumericSensorId::SoftwareInstallPerc) or has_sensor (NumericSensorId::SoftwareExpectedDuration);
             }
             // sensors
             // set sensors to unknown (e.g. when vehicle is disconnected)
@@ -511,6 +559,63 @@ namespace esphome
                         return entry.second;
                 }
                 return "Charge port latch state look up error";
+            }
+            inline static constexpr std::pair<int, const char*> CLIMATE_KEEPER_MODE_MAP[] = {
+                {CarServer_ClimateState_ClimateKeeperMode_Unknown_tag,  "Unknown"},
+                {CarServer_ClimateState_ClimateKeeperMode_Off_tag,      "Off"},
+                {CarServer_ClimateState_ClimateKeeperMode_On_tag,       "Keep"},
+                {CarServer_ClimateState_ClimateKeeperMode_Dog_tag,      "Dog"},
+                {CarServer_ClimateState_ClimateKeeperMode_Party_tag,    "Camp"},
+            };
+            inline static constexpr std::pair<int, const char*> SENTRY_MODE_STATE_MAP[] = {
+                {CarServer_ClosuresState_SentryModeState_Off_tag,   "Off"},
+                {CarServer_ClosuresState_SentryModeState_Idle_tag,  "Idle"},
+                {CarServer_ClosuresState_SentryModeState_Armed_tag, "Armed"},
+                {CarServer_ClosuresState_SentryModeState_Aware_tag, "Aware"},
+                {CarServer_ClosuresState_SentryModeState_Panic_tag, "Panic"},
+                {CarServer_ClosuresState_SentryModeState_Quiet_tag, "Quiet"},
+            };
+            inline static constexpr std::pair<int, const char*> DISPLAY_STATE_MAP[] = {
+                {CarServer_ClosuresState_DisplayState_Off_tag,           "Off"},
+                {CarServer_ClosuresState_DisplayState_Dim_tag,           "Dim"},
+                {CarServer_ClosuresState_DisplayState_Accessory_tag,     "Accessory"},
+                {CarServer_ClosuresState_DisplayState_On_tag,            "On"},
+                {CarServer_ClosuresState_DisplayState_Driving_tag,       "Driving"},
+                {CarServer_ClosuresState_DisplayState_Charging_tag,      "Charging"},
+                {CarServer_ClosuresState_DisplayState_Lock_tag,          "Lock"},
+                {CarServer_ClosuresState_DisplayState_Sentry_tag,        "Sentry"},
+                {CarServer_ClosuresState_DisplayState_Dog_tag,           "Dog"},
+                {CarServer_ClosuresState_DisplayState_Entertainment_tag, "Entertainment"},
+            };
+            inline static constexpr std::pair<int, const char*> CHARGE_CABLE_TYPE_MAP[] = {
+                {CarServer_ChargeState_CableType_SNA_tag,   "None"},
+                {CarServer_ChargeState_CableType_IEC_tag,   "IEC"},
+                {CarServer_ChargeState_CableType_SAE_tag,   "SAE"},
+                {CarServer_ChargeState_CableType_GB_AC_tag, "GB AC"},
+                {CarServer_ChargeState_CableType_GB_DC_tag, "GB DC"},
+            };
+            inline static constexpr std::pair<int, const char*> SCHEDULED_CHARGING_MODE_MAP[] = {
+                {CarServer_ChargeState_ScheduledChargingMode_ScheduledChargingModeOff,      "Off"},
+                {CarServer_ChargeState_ScheduledChargingMode_ScheduledChargingModeStartAt,  "Start at"},
+                {CarServer_ChargeState_ScheduledChargingMode_ScheduledChargingModeDepartBy, "Depart by"},
+            };
+            inline static constexpr std::pair<int, const char*> SOFTWARE_UPDATE_STATUS_MAP[] = {
+                {CarServer_SoftwareUpdateState_SoftwareUpdateStatus_Unknown_tag,             "None"},
+                {CarServer_SoftwareUpdateState_SoftwareUpdateStatus_Installing_tag,          "Installing"},
+                {CarServer_SoftwareUpdateState_SoftwareUpdateStatus_Scheduled_tag,           "Scheduled"},
+                {CarServer_SoftwareUpdateState_SoftwareUpdateStatus_Available_tag,           "Available"},
+                {CarServer_SoftwareUpdateState_SoftwareUpdateStatus_DownloadingWifiWait_tag, "Waiting for WiFi"},
+                {CarServer_SoftwareUpdateState_SoftwareUpdateStatus_Downloading_tag,         "Downloading"},
+            };
+            template<size_t N>
+            static std::string lookup (const std::pair<int, const char*> (&map)[N], int state)
+            {
+                for (const auto& entry : map)
+                {
+                    if (entry.first == state)
+                        return entry.second;
+                }
+                return "Look up error";
             }
             std::string days_to_string (int32_t days)
             {
